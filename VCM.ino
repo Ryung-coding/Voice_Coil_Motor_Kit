@@ -16,8 +16,9 @@ CytronMD motor(PWM_DIR, motor_pwm_pin, motor_dir_pin); //motor driver 설정완�
 
 //PID gain & controller gain (User Setting Point)--------------------------------------------------------------------------------------
 
-double Kp = 0.8;                            // PID gain의 P 게인을 설정하시오 (최적값 0.8)        [ ]
-double Ki = 0.3;                            // PID gain의 P 게인을 설정하시오 (최적값 0.8)        [ ]
+double Kp = 0.85;                           // PID gain의 P 게인을 설정하시오 (최적값 0.85) [ ]
+double Ki = 0.3;                            // PID gain의 P 게인을 설정하시오 (최적값 0.3)  [ ]
+double Kd = 0.003;                          // PID gain의 P 게인을 설정하시오 (최적값 0.003)[ ]
 double error_range = 3;                     // 허용 가능한 위치 오차를 설정하시오 (최적값 3)   [10^-6m]
 double reference_running_time_ms = 8000;    // LVDT가 이동한 거리에서의 유지 시간을 설정하시오     [ms] ex) 8000 일 경우 입력하신 위치로 이동후, 8000ms 이후 복귀
 
@@ -27,7 +28,7 @@ double reference_running_time_ms = 8000;    // LVDT가 이동한 거리에서의
 //Control value (don't touch)
 double reference = 0; double reference_past = 0; 
 double now_distance = 0; double past_distance = 0; 
-int16_t u = 0; int16_t u_past = 0; double I = 0;                                 
+int16_t u = 0; int16_t u_past = 0; int16_t y_past = 0; double I = 0;                                 
 double millisTime_i; double millisTime_f; double dt = 0;                                
 double LVDT_zero_point = 0; double zero_set_step = 10; 
 double start_time = 0;
@@ -105,6 +106,9 @@ int16_t computePID(double r, double y, double dt)
   double P = Kp * error;  
   
   I +=Ki * error * dt;
+
+  double D = Kd * -(y - y_past) / dt;
+  y_past = y;
   
   u = abs(error) <= error_range ? u_past : P + I + D;
   u_past = u;
