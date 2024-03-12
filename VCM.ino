@@ -8,22 +8,15 @@
 #define motor_dir_pin 3   //motor driver의 [Dir]를 보드의 [3]에 연결
 CytronMD motor(PWM_DIR, motor_pwm_pin, motor_dir_pin); //motor driver 설정완료
 
-
 //Calibation factor
 #define analogData_to_distance_mm 3.67  //실험을 통하여 LVDT의 OUTPUT의 1 증가량에 따른 거리를 측정하여 mm 단위로 기입
 
-
-
-//PID gain & controller gain (User Setting Point)--------------------------------------------------------------------------------------
-
-double Kp = 0.85;                           // PID gain의 P 게인을 설정하시오 (최적값 0.85) [ ]
-double Ki = 0.3;                            // PID gain의 P 게인을 설정하시오 (최적값 0.3)  [ ]
+//PID gain & controller gain (User Setting Point)
+double Kp = 0.6;                           // PID gain의 P 게인을 설정하시오 (최적값 0.60) [ ]
+double Ki = 1.0;                            // PID gain의 P 게인을 설정하시오 (최적값 1.0)  [ ]
 double Kd = 0.003;                          // PID gain의 P 게인을 설정하시오 (최적값 0.003)[ ]
 double error_range = 3;                     // 허용 가능한 위치 오차를 설정하시오 (최적값 3)   [10^-6m]
 double reference_running_time_ms = 8000;    // LVDT가 이동한 거리에서의 유지 시간을 설정하시오     [ms] ex) 8000 일 경우 입력하신 위치로 이동후, 8000ms 이후 복귀
-
-//-------------------------------------------------------------------------------------------------------------------------------------
-
 
 //Control value (don't touch)
 double reference = 0; double reference_past = 0; 
@@ -33,17 +26,13 @@ double millisTime_i; double millisTime_f; double dt = 0;
 double LVDT_zero_point = 0; double zero_set_step = 10; 
 double start_time = 0;
 
-
-//-------------------------------------------------------------------------------------------------------------------------------------
-
 //lowpassfilter() : LVDT에서 발생하는 잡음을 제거하여 반환
-float lowpassfilter(float filter, float data, float lowpass_constant)
+float lowpassfilter(float filter, float data, float cut_off_fre_Hz)
 {
-  filter = data * (1 - lowpass_constant) + filter * lowpass_constant;
+  double alpha = 1/(1+2*3.141592*cut_off_fre_Hz*dt);
+  filter = data * (1 - alpha) + filter * alpha;
   return filter;   
 }
-
-//-------------------------------------------------------------------------------------------------------------------------------------
 
 //update_reference() : 사용자가 원하는 LVDT의 위치를 업데이트
 void update_reference()
@@ -63,8 +52,6 @@ void update_reference()
    reference_past= reference;
 }
 
-//-------------------------------------------------------------------------------------------------------------------------------------
-
 //sampling_time() : 보드의 실시간 작동시간을 연산하여 반환
 double sampling_time()
 {  
@@ -73,8 +60,6 @@ double sampling_time()
   millisTime_i = millis();
   return sampling_time_sec;
 }
-
-//-------------------------------------------------------------------------------------------------------------------------------------
 
 //input_LVDT()() : LVDT의 입력값을 받아 mm 단위로 환산하여 반환
 double input_LVDT()
@@ -91,12 +76,11 @@ double input_LVDT()
   }
 
   double LVDT_raw_data = analogRead(LVDT_pin);
-  double distance = (LVDT_raw_data - LVDT_zero_point) * analogData_to_distance_mm;
-  distance = lowpassfilter(past_distance ,distance,0.99);
+  distance = (LVDT_raw_data - LVDT_zero_point) * analogData_to_distance_mm;
+  Serial.print(distance);
+  distance = lowpassfilter(past_distance ,distance,37.1);
   return distance;
 }
-
-//-------------------------------------------------------------------------------------------------------------------------------------
 
 //computePID() :PID 제어기를 작동하여 출력값을 반환
 int16_t computePID(double r, double y, double dt)
@@ -114,8 +98,6 @@ int16_t computePID(double r, double y, double dt)
   u_past = u;
   return u;
 }
-
-//-------------------------------------------------------------------------------------------------------------------------------------
 
 //Setting_Initial_Values() :보드및 LVDT의 초기값을 설정
 void Setting_Initial_Values()
@@ -150,7 +132,6 @@ void Setting_Initial_Values()
   delay(100);
 }
 
-//-------------------------------------------------------------------------------------------------------------------------------------
 
 //Run_VCM()) : motor driver를 작동하여 VCM을 구동
 void Run_VCM()
@@ -158,23 +139,22 @@ void Run_VCM()
   motor.setSpeed(computePID(reference, now_distance, dt));
 }
 
-//-------------------------------------------------------------------------------------------------------------------------------------
-
 //Data_Write() : 입력값, LVDT의 위치 등 얻은 값들을 확인
 void Data_Write()
 {
- Serial.print("입력값 : ");
+ Serial.print(",");
  Serial.print(reference);
- Serial.print(" , ");
+ Serial.print(",");
  Serial.print("100");
- Serial.print(" , ");
+ Serial.print(",");
  Serial.print("-100");
- Serial.print(" , ");
- Serial.print("현재값 : ");
- Serial.println(now_distance);
+ Serial.print(",");
+ Serial.print(now_distance);
+ Serial.print(",");
+ Serial.println(u);
+
 }
 
-//-------------------------------------------------------------------------------------------------------------------------------------
 void setup() 
 {
   Serial.begin(115200);
