@@ -76,7 +76,7 @@ double input_LVDT()
   }
 
   double LVDT_raw_data = analogRead(LVDT_pin);
-  distance = (LVDT_raw_data - LVDT_zero_point) * analogData_to_distance_mm;
+  double distance = (LVDT_raw_data - LVDT_zero_point) * analogData_to_distance_mm;
   Serial.print(distance);
   distance = lowpassfilter(past_distance ,distance,37.1);
   return distance;
